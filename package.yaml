@@ -1,6 +1,22 @@
+name: xmonad-dad
+ghc-options: -Wall -O2 -fspecialise-aggressively
+
 dependencies:
-  - base == 4.*
-  - haskell-say
+  - base
+
+library:
+  dependencies:
+    - xmonad
+  main: Lib.hs
+  source-dirs: src
+
 executables:
-  haskell-hello:
+  xmonad-dad:
+    dependencies:
+      - containers
+      - X11
+      - xmonad
+      - xmonad-contrib
+      - xmonad-dad
     main: Main.hs
+    source-dirs: exec

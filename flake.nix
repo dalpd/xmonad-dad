@@ -1,36 +1,44 @@
 {
-  # inspired by: https://serokell.io/blog/practical-nix-flakes#packaging-existing-applications
-  description = "A Hello World in Haskell with a dependency and a devShell";
-  inputs.nixpkgs.url = "nixpkgs";
+  description = "dad's XMonad flake";
+
+  inputs.nixpkgs.url = "github:NixOS/nixpkgs/haskell-updates";
+
   outputs = { self, nixpkgs }:
     let
-      supportedSystems = [ "x86_64-linux" "x86_64-darwin" ];
-      forAllSystems = f: nixpkgs.lib.genAttrs supportedSystems (system: f system);
-      nixpkgsFor = forAllSystems (system: import nixpkgs {
-        inherit system;
-        overlays = [ self.overlay ];
-      });
-    in
-    {
-      overlay = (final: prev: {
-        haskell-hello = final.haskellPackages.callCabal2nix "haskell-hello" ./. {};
-      });
-      packages = forAllSystems (system: {
-         haskell-hello = nixpkgsFor.${system}.haskell-hello;
-      });
-      defaultPackage = forAllSystems (system: self.packages.${system}.haskell-hello);
+      supportedSystems = [ "x86_64-linux" ];
+      forAllSystems = with nixpkgs.lib; f: genAttrs supportedSystems (system: f system);
+
+      nixpkgsFor = forAllSystems (system:
+        import nixpkgs {
+          inherit system;
+          overlays = [ self.overlays.default ];
+        });
+    in {
       checks = self.packages;
-      devShell = forAllSystems (system: let haskellPackages = nixpkgsFor.${system}.haskellPackages;
+
+      defaultPackage = forAllSystems (system: self.packages.${system}.xmonad-dad);
+
+      devShell = forAllSystems (system:
+        let haskellPackages = nixpkgsFor.${system}.haskellPackages;
         in haskellPackages.shellFor {
-          packages = p: [self.packages.${system}.haskell-hello];
-          withHoogle = true;
           buildInputs = with haskellPackages; [
             haskell-language-server
             ghcid
             cabal-install
+            nixfmt
           ];
-        # Change the prompt to show that you are in a devShell
-        shellHook = "export PS1='\\e[1;34mdev > \\e[0m'";
+
+          packages = p: [ self.packages.${system}.xmonad-dad ];
+
+          shellHook = "export PS1='\\e[1;34m[\\u@nix-shell:\\w]$ \\e[0m'";
+
+          withHoogle = false;
+          withHaddocks = false;
         });
-  };
+
+      overlays.default =
+        (final: prev: { xmonad-dad = final.haskellPackages.callCabal2nix "xmonad-dad" ./. { }; });
+
+      packages = forAllSystems (system: { xmonad-dad = nixpkgsFor.${system}.xmonad-dad; });
+    };
 }
